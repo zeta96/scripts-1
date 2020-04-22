@@ -16,7 +16,8 @@ CBL_LLVM=${CBL_TC}/llvm-tot/bin
 CBL_BNTL=${CBL_TC}/binutils/bin
 TCBLD=${CBL}/tc-build
 CBL_CCACHE=${CBL}/.ccache
-export CBL_ANDROID CBL_CTTLFSH CBL_KC CBL_KC_SRC CBL_SRC CBL_TC CBL_LLVM CBL_BNTL TCBLD CBL_CCACHE
+CBL_BIN=${CBL}/bin
+export CBL_ANDROID CBL_CTTLFSH CBL_KC CBL_KC_SRC CBL_SRC CBL_TC CBL_LLVM CBL_BNTL TCBLD CBL_CCACHE CBL_BIN
 
 
 # Configurations known to build with -Werror
@@ -190,6 +191,110 @@ function ccache_size() {
 }
 
 
+# Build CBL bin folder
+function create_cbl_bin() {(
+    set -eu
+
+    rm -rf "${CBL_BIN}"
+    mkdir -p "${CBL_BIN}"
+
+    USR_BIN=( test )
+    for BIN in "${USR_BIN[@]}"; do
+        ln -fs /usr/bin/"${BIN}" "${CBL_BIN}/${BIN}"
+    done
+
+    SLASH_BIN=( echo ls pwd true which )
+    for BIN in "${SLASH_BIN[@]}"; do
+        ln -fs /bin/"${BIN}" "${CBL_BIN}/${BIN}"
+    done
+
+    COMMANDS=( awk
+               basename
+               bc
+               bison
+               bzcat
+               bzip2
+               cat
+               ccache
+               chmod
+               cmp
+               comm
+               cp
+               cpio
+               cut
+               date
+               diff
+               dirname
+               du
+               egrep
+               env
+               expr
+               false
+               find
+               flex
+               getconf
+               grep
+               gzip
+               head
+               hostname
+               id
+               ln
+               m4
+               make
+               md5sum
+               mkdir
+               mkimage
+               mktemp
+               mv
+               nproc
+               od
+               openssl
+               paste
+               perl
+               pgrep
+               pkill
+               ps
+               python
+               python2
+               python2.7
+               python3
+               readlink
+               realpath
+               rm
+               rmdir
+               sed
+               seq
+               setsid
+               sh
+               sha1sum
+               sha256sum
+               sha512sum
+               sleep
+               sort
+               stat
+               tac
+               tar
+               tail
+               tee
+               timeout
+               touch
+               tr
+               truncate
+               uname
+               uniq
+               wc
+               whoami
+               xargs
+               xxd
+               xz
+               xzcat
+               zipinfo )
+    for BIN in "${COMMANDS[@]}"; do
+        ln -fs "$(command -v "${BIN}")" "${CBL_BIN}/${BIN}"
+    done
+)}
+
+
 # Build kernel with Clang (wrapper)
 function bldkw() {(
     [[ -f Makefile ]] || die "No Makefile found! Are you in a kernel tree?"
@@ -292,6 +397,16 @@ function bldkw() {(
     move_to_front_of_path "${CBL_BNTL}"
     move_to_front_of_path "${CBL_LLVM}"
     [[ -n ${PO} ]] && move_to_front_of_path "${PO}"
+
+    # Create whitelist of binaries
+    create_cbl_bin
+    for BINARY in "${AR}" "${CC}" "${HOSTAR}" "${HOSTCC}" "${HOSTCXX}" \
+                  "${HOSTLD}" "${LD}" "${NM}" "${OBJCOPY}" "${OBJDUMP}" \
+                  "${OBJSIZE}" "${READELF}" "${STRIP}"; do
+        ln -sf "$(command -v "${BINARY##* }")" "${CBL}/bin/${BINARY##* }"
+    done
+    [[ ${LLVM_IAS} -eq 0 ]] && ln -sf "$(command -v "${CROSS_COMPILE}as")" "${CBL}/bin/${CROSS_COMPILE}as"
+    export PATH=${CBL}/bin
 
     if [[ ${Q:=1} -ne 2 ]]; then
         echo
@@ -396,9 +511,9 @@ function bldk() {(
     BLDKW=( bldkw "${ARCH}" "${BLDKW_ARGS[@]}" )
 
     # Configure kernel
-    "${BLDKW[@]}" distclean "${CONFIG}"
+    rm -rf "${O:=out/${ARCH}}"
+    "${BLDKW[@]}" "${CONFIG}"
 
-    : "${O:=out/${ARCH}}"
     if ${CBL_DEFCONFIG:=false}; then
         # Extra configs for boot testings (runs extra tests)
         # From https://github.com/groeck/linux-build-test/blob/master/rootfs/scripts/common.sh
