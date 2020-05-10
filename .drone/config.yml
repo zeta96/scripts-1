@@ -7,7 +7,7 @@ platform:
 
 clone:
   depth: 1
-#kk
+#kkf
 steps:
   - name: Compile
     image: ubuntu:rolling
