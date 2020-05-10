@@ -14,7 +14,7 @@ steps:
     commands:
       - apt-get -y update
       - apt-get -y install bc build-essential bison bash python2 flex elfutils libelf-dev libisl-dev zip unzip curl git wget zstd
-      - apt-get -y install gzip gettext fdclone pv texinfo libelf-dev libgomp1 make tar libgmp-dev libmpfr-dev libmpc-dev libisl-dev build-essential git curl bash bc bison flex
+      - apt-get -y install gzip fdclone pv libelf-dev libgomp1 make tar libgmp-dev libmpfr-dev libmpc-dev libisl-dev build-essential git curl bash bc bison flex
       - curl -LSsO https://github.com/nathanchance/scripts/raw/master/env/stubs/bldgcc
       - source bldgcc
       - bldgcc arm64
